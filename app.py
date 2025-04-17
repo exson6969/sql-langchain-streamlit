@@ -70,6 +70,14 @@ def generate_answer(question: str, query: str, result: str):
     return response.content
 
 
+# Add a function to validate SQL queries
+def is_safe_query(query: str) -> bool:
+    """Check if the SQL query is safe and only performs read operations."""
+    unsafe_keywords = ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE"]
+    query_upper = query.upper()
+    return not any(keyword in query_upper for keyword in unsafe_keywords)
+
+
 # Streamlit UI
 st.title("LangChain SQL Query Generator")
 st.write("Ask a question, and the app will generate a SQL query, execute it, and provide an answer.")
@@ -90,6 +98,7 @@ selected_question = st.selectbox("Select a sample question:", [""] + sample_ques
 # Add a text input for custom questions
 question = st.text_input("Or enter your custom question:", value=selected_question)
 
+# Modify the submit button logic to include query validation
 if st.button("Submit"):
     if question:
         try:
@@ -97,13 +106,17 @@ if st.button("Submit"):
             st.write("Generated SQL Query:")
             st.code(query)
 
-            result = execute_query(query)
-            st.write("Query Result:")
-            st.write(result)
+            # Validate the query
+            if is_safe_query(query):
+                result = execute_query(query)
+                st.write("Query Result:")
+                st.write(result)
 
-            answer = generate_answer(question, query, result)
-            st.write("Answer to your question:")
-            st.write(answer)
+                answer = generate_answer(question, query, result)
+                st.write("Answer to your question:")
+                st.write(answer)
+            else:
+                st.error("You don't have permission to execute this query. Only read operations are allowed.")
         except Exception as e:
             st.error(f"An error occurred: {e}")
     else:
